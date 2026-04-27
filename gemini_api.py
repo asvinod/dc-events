@@ -1,17 +1,17 @@
 from google import genai
 import os
 from dotenv import load_dotenv
-from scrape_contents import scrape_page, prune_to_markdown
+from scrape_contents import scrape_page, clean_html
 from datetime import datetime
+import re 
 
 today = datetime.now().strftime("%Y-%m-%d")
 load_dotenv()
 
-url = "https://carnegieendowment.org/events"
+url = "https://www.csis.org/events"
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-html = scrape_page(url, headless=True)
-cleaned_markdown = prune_to_markdown(html)
+html = clean_html(scrape_page(url, headless=True))
 
 prompt = f"""
 Extract event information from the following webpage content.
@@ -31,7 +31,7 @@ Source URL: {url}
 
 Content:
 \"\"\"
-{cleaned_markdown}
+{html}
 \"\"\"
 """
 
@@ -40,7 +40,9 @@ resp = client.models.generate_content(
     contents=prompt
 )
 
-csv_output = resp.text
-print(csv_output)
+csv_output = resp.text.strip()
+if csv_output.startswith("```"):
+    csv_output = re.sub(r"^```[a-z]*\n?", "", csv_output)
+    csv_output = re.sub(r"\n?```$", "", csv_output)
 with open("events.csv", "w", encoding="utf-8") as f:
     f.write(csv_output)
