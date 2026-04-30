@@ -2,3 +2,10 @@ requests
 playwright
 beautifulsoup4
 python-dateutil
+playwright
+playwright-stealth
+google-genai
+python-dotenv
+markdownify
+gspread
+google-auth
