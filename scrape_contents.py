@@ -30,7 +30,10 @@ def scrape_page(url: str, headless: bool = True) -> str:
         )
         page = context.new_page()
         Stealth().apply_stealth_sync(page)
-        page.goto(url, wait_until="networkidle")
+        try:
+            page.goto(url, wait_until="networkidle", timeout=60000)
+        except:
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
         html = page.content()
         browser.close()
     return html

@@ -51,7 +51,7 @@ def call_api(url):
             if event_date < today_dt:
                 continue
         except ValueError:
-            pass  # If date can't be parsed, include it anyway
+            pass 
         rows.append({
             "Organization": event.get("Organization", ""),
             "Event Title": event.get("Event Title", ""),

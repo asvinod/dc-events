@@ -3,24 +3,31 @@ import csv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import gspread
 from google.oauth2.service_account import Credentials
+import time
 
 INPUT_FILE = "events_only.csv"
 SPREADSHEET_ID = "1kbiZgtnUAIUKgrOU_NIQI1uEzF7QFPcijna0sxvhuPw"
 CREDENTIALS_FILE = "dc-events-494919-1734826fd24a.json"
 FIELDNAMES = ["Organization", "Event Title", "Date", "Time", "Location", "Event URL"]
-MAX_WORKERS = 25
+MAX_WORKERS = 100
 MAX_ORGS = None
 
-def fetch_events(org):
+def fetch_events(org, retries=3, backoff=2):
     name = org["Organization Name"]
     url = org["Events URL"]
-    try:
-        rows = call_api(url)
-        print(f"✓ {name}: {len(rows)} events")
-        return rows
-    except Exception as e:
-        print(f"✗ {name}: Failed — {e}")
-        return []
+    for attempt in range(retries):
+        try:
+            rows = call_api(url)
+            print(f"{name}: {len(rows)} events")
+            return rows
+        except Exception as e:
+            if attempt < retries - 1:
+                wait = backoff ** attempt
+                #print(f"{name}: Failed (attempt {attempt + 1}/{retries}), retrying in {wait}s — {e}")
+                time.sleep(wait)
+            else:
+                #print(f"{name}: Failed after {retries} attempts — {e}")
+                return []
 
 def update_google_sheet(rows):
     scopes = [
