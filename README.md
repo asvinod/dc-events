@@ -17,3 +17,6 @@ This is a built-in Python library for regular expressions, which I use to do fur
 I'm using the "gemini-2.5-flash-lite" model as it is the cheapest, and since I'm directly prompting it with the contents of the site, I don't have any need for a better model.
 ## D. Google Sheets API 
 This is used to update a published spreadsheet that is updated weekly by a Github workflow script! 
+# Things To Work On (over time..) 
+1. Continue expanding list of organizations 
+2. Cleaner extraction of event time and location
