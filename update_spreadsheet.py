@@ -17,16 +17,14 @@ def fetch_events(org, retries=3, backoff=2):
     url = org["Events URL"]
     for attempt in range(retries):
         try:
-            rows = call_api(url)
+            rows = call_api(url) # the API call is in a retry loop in case of 503 error - high demand
             print(f"{name}: {len(rows)} events")
             return rows
         except Exception as e:
             if attempt < retries - 1:
                 wait = backoff ** attempt
-                #print(f"{name}: Failed (attempt {attempt + 1}/{retries}), retrying in {wait}s — {e}")
                 time.sleep(wait)
             else:
-                #print(f"{name}: Failed after {retries} attempts — {e}")
                 return []
 
 def update_google_sheet(rows):
@@ -34,6 +32,7 @@ def update_google_sheet(rows):
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
+    # all google authentication to open spreadsheet by ID and write events too 
     creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=scopes)
     client = gspread.authorize(creds)
     sheet = client.open_by_key(SPREADSHEET_ID).sheet1
@@ -44,30 +43,22 @@ def update_google_sheet(rows):
             [row.get(field, "") for field in FIELDNAMES]
             for row in rows
         ])
-    print(f"Updated Google Sheet with {len(rows)} events!")
 
-# Load orgs
-with open(INPUT_FILE, newline="", encoding="utf-8") as f:
-    orgs = list(csv.DictReader(f))
+if __name__ == "__main__":
+    with open(INPUT_FILE, newline="", encoding="utf-8") as f:
+        orgs = list(csv.DictReader(f))
 
-if MAX_ORGS is not None:
-    orgs = orgs[:MAX_ORGS]
+    if MAX_ORGS is not None:
+        orgs = orgs[:MAX_ORGS]
 
-# Fetch in parallel
-all_rows = []
-with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-    futures = {executor.submit(fetch_events, org): org for org in orgs}
-    for future in as_completed(futures):
-        all_rows.extend(future.result())
+    all_rows = []
+    # each organization is scheduled to be scraped, up to 100
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {executor.submit(fetch_events, org): org for org in orgs}
+        for future in as_completed(futures):
+            all_rows.extend(future.result())
 
-all_rows.sort(key=lambda x: x.get("Date", ""))
-# Push to Google Sheets
-update_google_sheet(all_rows)
-
-# Also save locally
-with open("all_events.csv", "w", newline="", encoding="utf-8") as f:
-    writer = csv.DictWriter(f, fieldnames=FIELDNAMES, extrasaction="ignore")
-    writer.writeheader()
-    writer.writerows(all_rows)
-
-print(f"\nDone! {len(all_rows)} total events.")
+    # Sort by date 
+    all_rows.sort(key=lambda x: x.get("Date", ""))
+    # Update spreadsheet 
+    update_google_sheet(all_rows)

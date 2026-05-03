@@ -7,10 +7,11 @@ import re
 import json
 
 def call_api(url):
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d") # Get current date 
     load_dotenv()
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     html = clean_html(scrape_page(url, headless=True))
+    # Get JSON array, no extra text, provide prompt, URL, & HTML 
     prompt = f"""
     Extract event information from the following webpage content.
     Return ONLY a valid JSON array of objects with these exact keys:
@@ -41,7 +42,7 @@ def call_api(url):
 
     events = json.loads(text)
 
-    # Double-check dates in Python as a safety net
+    # In case LLM hallucinates 
     today_dt = datetime.now().date()
     rows = []
     for event in events:
